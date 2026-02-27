@@ -35,7 +35,7 @@ export class SummaryAgent {
       `, [projectId]);
 
       const tasks = await client.query(`
-        SELECT column, COUNT(*) as count FROM tasks WHERE project_id = $1 GROUP BY column
+        SELECT kanban_column, COUNT(*) as count FROM tasks WHERE project_id = $1 GROUP BY kanban_column
       `, [projectId]);
 
       const payments = await client.query(`
@@ -140,7 +140,7 @@ export class SummaryAgent {
     const client = await pool.connect();
     try {
       let query = `
-        SELECT column, priority, COUNT(*) as count
+        SELECT kanban_column, priority, COUNT(*) as count
         FROM tasks
       `;
 
@@ -148,7 +148,7 @@ export class SummaryAgent {
         query += ' WHERE project_id = $1';
       }
 
-      query += ' GROUP BY column, priority ORDER BY column, priority';
+      query += ' GROUP BY kanban_column, priority ORDER BY kanban_column, priority';
 
       const result = projectId
         ? await client.query(query, [projectId])
@@ -158,7 +158,7 @@ export class SummaryAgent {
       const byPriority: Record<string, number> = { low: 0, medium: 0, high: 0 };
 
       for (const row of result.rows) {
-        byColumn[row.column] = (byColumn[row.column] || 0) + parseInt(row.count);
+        byColumn[row.kanban_column] = (byColumn[row.kanban_column] || 0) + parseInt(row.count);
         byPriority[row.priority] = (byPriority[row.priority] || 0) + parseInt(row.count);
       }
 
