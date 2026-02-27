@@ -33,4 +33,4 @@ services:
     dockerfilePath: ./frontend/Dockerfile
     envVars:
       - key: VITE_API_URL
-        value: https://ppi-backend.onrender.com
+        value: https://ppi-backend-4dup.onrender.com
