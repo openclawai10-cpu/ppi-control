@@ -180,7 +180,7 @@ export class LeaderAgent {
 
       const tasks = await client.query(`
         SELECT kanban_column, COUNT(*) as count FROM tasks
-        GROUP BY column
+        GROUP BY kanban_column
       `);
 
       const report = {
@@ -244,7 +244,7 @@ export class LeaderAgent {
         LEFT JOIN projects p ON t.project_id = p.id
         WHERE t.due_date IS NOT NULL
         AND t.due_date <= CURRENT_DATE + INTERVAL '48 hours'
-        AND t.column NOT IN ('completed', 'done')
+        AND t.kanban_column NOT IN ('completed', 'done')
       `);
 
       for (const task of result.rows) {
