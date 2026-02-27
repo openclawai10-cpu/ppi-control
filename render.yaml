@@ -1,17 +1,10 @@
-services:
-  # PostgreSQL Database
-  - type: pserv
-    name: ppi-database
-    env: docker
+databases:
+  - name: ppi-database
     plan: free
-    envVars:
-      - key: POSTGRES_USER
-        value: ppi_user
-      - key: POSTGRES_PASSWORD
-        generateValue: true
-      - key: POSTGRES_DB
-        value: ppi_control
+    user: ppi_user
+    databaseName: ppi_control
 
+services:
   # Backend API
   - type: web
     name: ppi-backend
@@ -41,7 +34,3 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://ppi-backend.onrender.com
-
-databases:
-  - name: ppi-database
-    plan: free

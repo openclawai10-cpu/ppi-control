@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Send, ArrowUpRight, ArrowDownLeft, MessageSquare } from 'lucide-react';
+import { Send, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
 interface ChannelMessage {
   id: string;

@@ -4,12 +4,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Plus,
-  AlertCircle,
-  Clock,
-  CheckCircle,
   User,
-  Calendar,
-  ChevronDown
+  Calendar
 } from 'lucide-react';
 
 interface Task {

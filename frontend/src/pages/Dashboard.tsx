@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
-  TrendingUp,
   AlertTriangle,
   CheckCircle,
   Clock,
   DollarSign,
-  FileText,
-  Users,
   Activity
 } from 'lucide-react';
 
@@ -38,7 +35,7 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const params = projectId ? `?projectId=${projectId}` : '';
+  
       const [tasksRes, financialRes, risksRes, projectsRes] = await Promise.all([
         axios.get(`/api/agents/summary/action?action=summary:tasks&payload=${JSON.stringify({ projectId })}`),
         axios.get(`/api/agents/summary/action?action=summary:financial&payload=${JSON.stringify({ projectId })}`),
