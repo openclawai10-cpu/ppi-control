@@ -41,3 +41,23 @@ code {
   opacity: 0.5;
   transform: rotate(3deg);
 }
+
+/* Toast animation */
+@keyframes slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+/* Badge pulse */
+@keyframes pulse-badge {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+.badge-pulse {
+  animation: pulse-badge 2s ease-in-out infinite;
+}

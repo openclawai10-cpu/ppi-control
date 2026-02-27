@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import ToastContainer from './components/Toast';
 import Feed from './pages/Feed';
 import Kanban from './pages/Kanban';
 import Channels from './pages/Channels';
@@ -23,6 +24,7 @@ function App() {
           <Route path="/purchases" element={<Purchases />} />
         </Routes>
       </Layout>
+      <ToastContainer />
     </Router>
   );
 }

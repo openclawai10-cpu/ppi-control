@@ -14,6 +14,9 @@ import purchaseRoutes from './routes/purchases';
 import adminRoutes from './routes/admin';
 import paymentRoutes from './routes/payments';
 import riskRoutes from './routes/risks';
+import reportRoutes from './routes/reports';
+import teamsRoutes from './routes/teams';
+import aiRoutes from './routes/ai';
 
 import { AgentOrchestrator } from './agents/orchestrator';
 import { initDatabase } from './db/init';
@@ -48,6 +51,9 @@ app.use('/api/purchases', purchaseRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/risks', riskRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/teams', teamsRoutes);
+app.use('/api/ai', aiRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
