@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import Documents from './pages/Documents';
 import Purchases from './pages/Purchases';
+import Analysis from './pages/Analysis';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
