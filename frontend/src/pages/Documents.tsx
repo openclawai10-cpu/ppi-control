@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Search, FileText, Trash2, Download } from 'lucide-react';
+import { Plus, Search, FileText, Trash2, Download, Upload, File, FileArchive, FileSpreadsheet, Image, X } from 'lucide-react';
 
 interface Document {
   id: string;
@@ -10,7 +10,6 @@ interface Document {
   name: string;
   type: string;
   category: string;
-  content: string;
   metadata: any;
   created_at: string;
 }
@@ -28,12 +27,15 @@ export default function Documents() {
   const [filterProject, setFilterProject] = useState('');
   const [filterCategory, setFilterCategory] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [newDoc, setNewDoc] = useState({
     name: '',
-    type: 'document',
     category: 'general',
-    projectId: '',
-    content: ''
+    projectId: ''
   });
 
   const fetchData = async () => {
@@ -60,23 +62,51 @@ export default function Documents() {
     fetchData();
   }, [filterProject, filterCategory]);
 
-  const handleCreateDocument = async () => {
-    if (!newDoc.name.trim()) return;
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      if (!newDoc.name) {
+        setNewDoc({ ...newDoc, name: file.name });
+      }
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+
+    setUploading(true);
+    setUploadProgress(0);
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('name', newDoc.name || selectedFile.name);
+    formData.append('category', newDoc.category);
+    if (newDoc.projectId) {
+      formData.append('projectId', newDoc.projectId);
+    }
 
     try {
-      await axios.post('/api/documents', {
-        projectId: newDoc.projectId || null,
-        name: newDoc.name,
-        type: newDoc.type,
-        category: newDoc.category,
-        content: newDoc.content
+      await axios.post('/api/documents/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+          const progress = progressEvent.total
+            ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+            : 0;
+          setUploadProgress(progress);
+        }
       });
 
-      setNewDoc({ name: '', type: 'document', category: 'general', projectId: '', content: '' });
+      setNewDoc({ name: '', category: 'general', projectId: '' });
+      setSelectedFile(null);
       setShowModal(false);
       fetchData();
     } catch (error) {
-      console.error('Failed to create document:', error);
+      console.error('Failed to upload file:', error);
+      alert('Falha ao enviar arquivo');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -91,15 +121,29 @@ export default function Documents() {
     }
   };
 
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case 'archive': return FileArchive;
+      case 'spreadsheet': return FileSpreadsheet;
+      case 'image': return Image;
+      case 'pdf': return FileText;
+      default: return File;
+    }
+  };
+
   const filteredDocuments = documents.filter(doc =>
-    doc.name.toLowerCase().includes(search.toLowerCase()) ||
-    doc.type?.toLowerCase().includes(search.toLowerCase())
+    doc.name.toLowerCase().includes(search.toLowerCase())
   );
 
   const categoryColors: Record<string, string> = {
     compliance: 'bg-orange-100 text-orange-700',
     financial: 'bg-green-100 text-green-700',
-    spreadsheet: 'bg-blue-100 text-blue-700',
     general: 'bg-gray-100 text-gray-700'
   };
 
@@ -108,14 +152,14 @@ export default function Documents() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Documentos</h1>
-          <p className="text-gray-500">Banco de dados de documentos e planilhas</p>
+          <p className="text-gray-500">Upload e gestão de arquivos (PDF, ZIP, Excel, etc.)</p>
         </div>
         <button
           onClick={() => setShowModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
         >
-          <Plus className="w-4 h-4" />
-          Novo Documento
+          <Upload className="w-4 h-4" />
+          Upload
         </button>
       </div>
 
@@ -152,7 +196,6 @@ export default function Documents() {
             <option value="">Todas as categorias</option>
             <option value="compliance">Compliance</option>
             <option value="financial">Financeiro</option>
-            <option value="spreadsheet">Planilha</option>
             <option value="general">Geral</option>
           </select>
         </div>
@@ -165,6 +208,7 @@ export default function Documents() {
             <tr>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Nome</th>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Tipo</th>
+              <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Tamanho</th>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Categoria</th>
               <th className="text-left px-4 py-3 text-sm font-medium text-gray-500">Criado em</th>
               <th className="text-right px-4 py-3 text-sm font-medium text-gray-500">Ações</th>
@@ -173,81 +217,104 @@ export default function Documents() {
           <tbody className="divide-y">
             {loading ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Carregando...</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Carregando...</td>
               </tr>
             ) : filteredDocuments.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-400">Nenhum documento encontrado</td>
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-400">Nenhum documento encontrado</td>
               </tr>
             ) : (
-              filteredDocuments.map((doc) => (
-                <tr key={doc.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-gray-400" />
-                      <span className="font-medium">{doc.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">{doc.type}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 text-xs rounded ${categoryColors[doc.category] || 'bg-gray-100'}`}>
-                      {doc.category}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-500">
-                    {format(new Date(doc.created_at), 'dd/MM/yyyy', { locale: ptBR })}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
-                      <button className="p-1 hover:bg-gray-100 rounded">
-                        <Download className="w-4 h-4 text-gray-400" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(doc.id)}
-                        className="p-1 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              filteredDocuments.map((doc) => {
+                const Icon = getFileIcon(doc.type);
+                return (
+                  <tr key={doc.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-5 h-5 text-gray-400" />
+                        <span className="font-medium">{doc.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500 uppercase">{doc.metadata?.extension || doc.type}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{formatFileSize(doc.metadata?.size || 0)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 text-xs rounded ${categoryColors[doc.category] || 'bg-gray-100'}`}>
+                        {doc.category}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-500">
+                      {format(new Date(doc.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <a
+                          href={`/api/documents/${doc.id}/download`}
+                          className="p-1 hover:bg-gray-100 rounded"
+                          title="Baixar"
+                        >
+                          <Download className="w-4 h-4 text-gray-400" />
+                        </a>
+                        <button
+                          onClick={() => handleDelete(doc.id)}
+                          className="p-1 hover:bg-red-50 rounded"
+                          title="Excluir"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
-      {/* Modal */}
+      {/* Upload Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-lg">
-            <h2 className="text-xl font-bold mb-4">Novo Documento</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Upload de Arquivo</h2>
+              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <div className="space-y-4">
+              {/* File drop zone */}
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-primary-500 hover:bg-primary-50 transition-colors"
+              >
+                <Upload className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600 mb-1">
+                  {selectedFile ? selectedFile.name : 'Clique ou arraste um arquivo'}
+                </p>
+                <p className="text-xs text-gray-400">
+                  PDF, ZIP, Excel, Imagens (máx. 50MB)
+                </p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileSelect}
+                  className="hidden"
+                  accept=".pdf,.zip,.rar,.7z,.xlsx,.xls,.csv,.png,.jpg,.jpeg,.gif,.doc,.docx,.txt,.md"
+                />
+              </div>
+
               <div>
-                <label className="block text-sm font-medium mb-1">Nome *</label>
+                <label className="block text-sm font-medium mb-1">Nome do arquivo</label>
                 <input
                   type="text"
                   value={newDoc.name}
                   onChange={(e) => setNewDoc({ ...newDoc, name: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Nome para o arquivo"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Tipo</label>
-                  <select
-                    value={newDoc.type}
-                    onChange={(e) => setNewDoc({ ...newDoc, type: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="document">Documento</option>
-                    <option value="spreadsheet">Planilha</option>
-                    <option value="report">Relatório</option>
-                    <option value="contract">Contrato</option>
-                  </select>
-                </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Categoria</label>
                   <select
@@ -258,49 +325,54 @@ export default function Documents() {
                     <option value="general">Geral</option>
                     <option value="compliance">Compliance</option>
                     <option value="financial">Financeiro</option>
-                    <option value="spreadsheet">Planilha</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Projeto</label>
+                  <select
+                    value={newDoc.projectId}
+                    onChange={(e) => setNewDoc({ ...newDoc, projectId: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Nenhum projeto</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
                   </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium mb-1">Projeto</label>
-                <select
-                  value={newDoc.projectId}
-                  onChange={(e) => setNewDoc({ ...newDoc, projectId: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Selecione um projeto</option>
-                  {projects.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Conteúdo</label>
-                <textarea
-                  value={newDoc.content}
-                  onChange={(e) => setNewDoc({ ...newDoc, content: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  rows={4}
-                />
-              </div>
+              {/* Progress bar */}
+              {uploading && (
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span>Enviando...</span>
+                    <span>{uploadProgress}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-primary-600 h-2 rounded-full transition-all"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2 mt-6">
               <button
                 onClick={() => setShowModal(false)}
                 className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50"
+                disabled={uploading}
               >
                 Cancelar
               </button>
               <button
-                onClick={handleCreateDocument}
-                disabled={!newDoc.name.trim()}
+                onClick={handleUpload}
+                disabled={!selectedFile || uploading}
                 className="flex-1 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50"
               >
-                Criar
+                {uploading ? 'Enviando...' : 'Enviar'}
               </button>
             </div>
           </div>

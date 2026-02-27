@@ -2,17 +2,16 @@ import { Router } from 'express';
 import { pool } from '../db/init';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
+import * as path from 'path';
 
 const router = Router();
 
-// Configurar multer para upload em memória
 const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 } // 10MB
+  limits: { fileSize: 50 * 1024 * 1024 }
 });
 
-// Upload de arquivo
 router.post('/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
@@ -22,16 +21,20 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     const { projectId, name, category } = req.body;
     const file = req.file;
 
-    // Converter arquivo para base64 para armazenamento
-    const fileContent = file.buffer.toString('base64');
-    const mimeType = file.mimetype;
-
-    // Determinar tipo do arquivo
     let docType = 'document';
-    if (mimeType.includes('pdf')) docType = 'pdf';
-    else if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || file.originalname.endsWith('.csv')) docType = 'spreadsheet';
-    else if (mimeType.includes('image')) docType = 'image';
-    else if (mimeType.includes('word') || file.originalname.endsWith('.doc')) docType = 'document';
+    const ext = path.extname(file.originalname).toLowerCase();
+    
+    if (['.zip', '.rar', '.7z'].includes(ext)) {
+      docType = 'archive';
+    } else if (ext === '.pdf') {
+      docType = 'pdf';
+    } else if (['.xlsx', '.xls', '.csv'].includes(ext)) {
+      docType = 'spreadsheet';
+    } else if (['.png', '.jpg', '.jpeg', '.gif'].includes(ext)) {
+      docType = 'image';
+    }
+
+    const fileContent = file.buffer.toString('base64');
 
     const result = await pool.query(`
       INSERT INTO documents (id, project_id, name, type, category, content, metadata, created_at)
@@ -46,8 +49,9 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       fileContent,
       JSON.stringify({
         originalName: file.originalname,
-        mimeType: mimeType,
+        mimeType: file.mimetype,
         size: file.size,
+        extension: ext,
         uploadedAt: new Date().toISOString()
       }),
       new Date()
@@ -55,7 +59,6 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
     const document = result.rows[0];
 
-    // Log no feed
     await pool.query(`
       INSERT INTO feed_logs (id, project_id, agent, category, action, details, created_at)
       VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -76,7 +79,8 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         name: document.name,
         type: document.type,
         category: document.category,
-        size: file.size
+        size: file.size,
+        extension: ext
       }
     });
   } catch (error) {
@@ -85,7 +89,6 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// Download de arquivo
 router.get('/:id/download', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM documents WHERE id = $1', [req.params.id]);
@@ -97,7 +100,6 @@ router.get('/:id/download', async (req, res) => {
     const doc = result.rows[0];
     const metadata = doc.metadata || {};
 
-    // Decodificar base64
     const fileBuffer = Buffer.from(doc.content, 'base64');
 
     res.setHeader('Content-Type', metadata.mimetype || 'application/octet-stream');
@@ -108,7 +110,6 @@ router.get('/:id/download', async (req, res) => {
   }
 });
 
-// Listar documentos
 router.get('/', async (req, res) => {
   try {
     const { projectId, category, type } = req.query;
@@ -134,20 +135,33 @@ router.get('/', async (req, res) => {
 
     const result = await pool.query(query, params);
     
-    // Remover conteúdo base64 da listagem
     const documents = result.rows.map(doc => ({
       ...doc,
       metadata: {
-        ...doc.metadata,
         size: doc.metadata?.size || 0,
         originalName: doc.metadata?.originalName || doc.name,
-        mimeType: doc.metadata?.mimetype || 'unknown'
+        mimeType: doc.metadata?.mimetype || 'unknown',
+        extension: doc.metadata?.extension || ''
       }
     }));
 
     res.json(documents);
   } catch (error) {
     res.status(500).json({ error: 'Falha ao buscar documentos' });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const result = await pool.query('DELETE FROM documents WHERE id = $1 RETURNING *', [req.params.id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Documento não encontrado' });
+    }
+
+    res.json({ success: true, message: 'Documento excluído' });
+  } catch (error) {
+    res.status(500).json({ error: 'Falha ao excluir documento' });
   }
 });
 

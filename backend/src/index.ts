@@ -17,6 +17,7 @@ import riskRoutes from './routes/risks';
 import reportRoutes from './routes/reports';
 import teamsRoutes from './routes/teams';
 import aiRoutes from './routes/ai';
+import authRoutes from './routes/auth';
 
 import { AgentOrchestrator } from './agents/orchestrator';
 import { initDatabase } from './db/init';
@@ -41,6 +42,7 @@ app.use(cors({
 app.use(express.json());
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/feed', feedRoutes);
