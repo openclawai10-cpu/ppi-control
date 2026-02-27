@@ -1,0 +1,47 @@
+services:
+  # PostgreSQL Database
+  - type: pserv
+    name: ppi-database
+    env: docker
+    plan: free
+    envVars:
+      - key: POSTGRES_USER
+        value: ppi_user
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_DB
+        value: ppi_control
+
+  # Backend API
+  - type: web
+    name: ppi-backend
+    env: docker
+    plan: free
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ppi-database
+          property: connectionString
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        value: https://ppi-frontend.onrender.com
+
+  # Frontend
+  - type: web
+    name: ppi-frontend
+    env: docker
+    plan: free
+    dockerContext: ./frontend
+    dockerfilePath: ./frontend/Dockerfile
+    envVars:
+      - key: VITE_API_URL
+        value: https://ppi-backend.onrender.com
+
+databases:
+  - name: ppi-database
+    plan: free
