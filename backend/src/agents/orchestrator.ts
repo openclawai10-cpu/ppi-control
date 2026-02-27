@@ -1,17 +1,35 @@
-// Defina a interface que os agentes estão tentando importar
 export interface AgentMessage {
   payload: any;
+  action?: string;   // Adicionado: Necessário para os agentes
   sender?: string;
   topic?: string;
 }
 
-// Renomeie para AgentOrchestrator para bater com os imports dos agentes
 export class AgentOrchestrator {
-  constructor() {
+  constructor(config?: any) { // Aceita argumento se o index.ts passar um
     // Initialization code
   }
 
-  // Adicione tipagem aos parâmetros para evitar novos erros de compilação
+  // Método exigido pelo src/index.ts
+  async start(): Promise<void> {
+    console.log("Orchestrator started");
+  }
+
+  // Método exigido por quase todos os agentes
+  logToFeed(message: string, agentName: string): void {
+    console.log(`[${agentName}]: ${message}`);
+  }
+
+  // Método exigido para comunicação em massa
+  broadcast(message: AgentMessage): void {
+    console.log("Broadcasting message:", message.action);
+  }
+
+  // Método exigido para envio direcionado
+  routeMessage(target: string, message: AgentMessage): void {
+    console.log(`Routing message to ${target}`);
+  }
+
   validateMessage(message: AgentMessage): boolean {
     return message && typeof message.payload !== 'undefined';
   }
@@ -20,7 +38,5 @@ export class AgentOrchestrator {
     if (!this.validateMessage(message)) {
       throw new Error('Invalid message: payload is undefined');
     }
-    const payload = message.payload;
-    // Process the payload
   }
 }
