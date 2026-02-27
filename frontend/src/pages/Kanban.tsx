@@ -13,7 +13,7 @@ interface Task {
   project_id: string;
   title: string;
   description: string;
-  column: 'new' | 'allocated' | 'in_progress' | 'completed';
+  kanban_column: 'new' | 'allocated' | 'in_progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
   assigned_agent: string;
   due_date: string;
@@ -121,11 +121,11 @@ export default function Kanban() {
 
     try {
       await axios.put(`/api/tasks/${draggedTask.id}`, {
-        column: columnId
+        kanbanColumn: columnId
       });
 
       setTasks(tasks.map(t =>
-        t.id === draggedTask.id ? { ...t, column: columnId as any } : t
+        t.id === draggedTask.id ? { ...t, kanban_column: columnId as any } : t
       ));
     } catch (error) {
       console.error('Failed to move task:', error);
@@ -135,7 +135,7 @@ export default function Kanban() {
   };
 
   const getTasksByColumn = (columnId: string) => {
-    let filtered = tasks.filter(t => t.column === columnId);
+    let filtered = tasks.filter(t => t.kanban_column === columnId);
     if (selectedProject) {
       filtered = filtered.filter(t => t.project_id === selectedProject);
     }

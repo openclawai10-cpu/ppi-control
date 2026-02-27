@@ -33,7 +33,7 @@ export async function initDatabase(): Promise<void> {
         project_id UUID REFERENCES projects(id),
         title VARCHAR(255) NOT NULL,
         description TEXT,
-        column VARCHAR(50) DEFAULT 'new',
+        kanban_column VARCHAR(50) DEFAULT 'new',
         priority VARCHAR(20) DEFAULT 'medium',
         assigned_agent VARCHAR(50),
         due_date DATE,

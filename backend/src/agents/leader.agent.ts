@@ -57,7 +57,7 @@ export class LeaderAgent {
     const client = await pool.connect();
     try {
       const result = await client.query(`
-        INSERT INTO tasks (id, project_id, title, description, column, priority, due_date, created_at)
+        INSERT INTO tasks (id, project_id, title, description, kanban_column, priority, due_date, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         RETURNING *
       `, [
@@ -107,9 +107,9 @@ export class LeaderAgent {
     const client = await pool.connect();
     try {
       const result = await client.query(`
-        UPDATE tasks SET column = $1, updated_at = $2 WHERE id = $3
+        UPDATE tasks SET kanban_column = $1, updated_at = $2 WHERE id = $3
         RETURNING *
-      `, [data.column, new Date(), data.taskId]);
+      `, [data.kanbanColumn, new Date(), data.taskId]);
 
       const task = result.rows[0];
 
@@ -119,8 +119,8 @@ export class LeaderAgent {
         taskId: task.id,
         agent: this.name,
         category: 'task',
-        action: `Tarefa movida para: ${data.column}`,
-        details: { task, newColumn: data.column }
+        action: `Tarefa movida para: ${data.kanbanColumn}`,
+        details: { task, newColumn: data.kanbanColumn }
       });
 
       this.orchestrator.broadcast('task:updated', task);
@@ -135,7 +135,7 @@ export class LeaderAgent {
     const client = await pool.connect();
     try {
       const result = await client.query(`
-        UPDATE tasks SET assigned_agent = $1, column = 'allocated', updated_at = $2
+        UPDATE tasks SET assigned_agent = $1, kanban_column = 'allocated', updated_at = $2
         WHERE id = $3
         RETURNING *
       `, [data.agent, new Date(), data.taskId]);
@@ -179,7 +179,7 @@ export class LeaderAgent {
       `);
 
       const tasks = await client.query(`
-        SELECT column, COUNT(*) as count FROM tasks
+        SELECT kanban_column, COUNT(*) as count FROM tasks
         GROUP BY column
       `);
 

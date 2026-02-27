@@ -6,7 +6,7 @@ const router = Router();
 // List all tasks
 router.get('/', async (req, res) => {
   try {
-    const { projectId, column, priority } = req.query;
+    const { projectId, kanbanColumn, priority } = req.query;
 
     let query = `
       SELECT t.*, p.name as project_name
@@ -21,9 +21,9 @@ router.get('/', async (req, res) => {
       query += ` AND t.project_id = $${paramIndex++}`;
       params.push(projectId);
     }
-    if (column) {
-      query += ` AND t.column = $${paramIndex++}`;
-      params.push(column);
+    if (kanbanColumn) {
+      query += ` AND t.kanban_column = $${paramIndex++}`;
+      params.push(kanbanColumn);
     }
     if (priority) {
       query += ` AND t.priority = $${paramIndex++}`;
@@ -65,7 +65,7 @@ router.post('/', async (req, res) => {
     const { projectId, title, description, priority, dueDate } = req.body;
 
     const result = await pool.query(`
-      INSERT INTO tasks (project_id, title, description, column, priority, due_date, created_at)
+      INSERT INTO tasks (project_id, title, description, kanban_column, priority, due_date, created_at)
       VALUES ($1, $2, $3, 'new', $4, $5, $6)
       RETURNING *
     `, [projectId, title, description || '', priority || 'medium', dueDate || null, new Date()]);
@@ -79,21 +79,21 @@ router.post('/', async (req, res) => {
 // Update task
 router.put('/:id', async (req, res) => {
   try {
-    const { title, description, column, priority, assignedAgent, dueDate } = req.body;
+    const { title, description, kanbanColumn, priority, assignedAgent, dueDate } = req.body;
 
     const result = await pool.query(`
       UPDATE tasks
       SET
         title = COALESCE($1, title),
         description = COALESCE($2, description),
-        column = COALESCE($3, column),
+        kanban_column = COALESCE($3, kanban_column),
         priority = COALESCE($4, priority),
         assigned_agent = COALESCE($5, assigned_agent),
         due_date = COALESCE($6, due_date),
         updated_at = $7
       WHERE id = $8
       RETURNING *
-    `, [title, description, column, priority, assignedAgent, dueDate, new Date(), req.params.id]);
+    `, [title, description, kanbanColumn, priority, assignedAgent, dueDate, new Date(), req.params.id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Task not found' });
