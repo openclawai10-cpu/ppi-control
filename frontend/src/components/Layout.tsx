@@ -61,7 +61,7 @@ export default function Layout({ children }: LayoutProps) {
               <HardHat className="w-8 h-8 text-primary-600" />
               <div>
                 <h1 className="font-bold text-lg">PPI Control</h1>
-                <p className="text-xs text-gray-500">Sistema Multiagentes</p>
+                <p className="text-xs text-gray-500">Sistema de Gestão</p>
               </div>
             </div>
           </div>
