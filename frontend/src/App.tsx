@@ -59,6 +59,7 @@ function AppRoutes() {
                 <Route path="/projects" element={<Projects />} />
                 <Route path="/documents" element={<Documents />} />
                 <Route path="/purchases" element={<Purchases />} />
+                <Route path="/analysis" element={<Analysis />} />
               </Routes>
             </Layout>
           </PrivateRoute>
