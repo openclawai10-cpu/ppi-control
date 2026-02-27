@@ -11,6 +11,7 @@ import agentRoutes from './routes/agents';
 import documentRoutes from './routes/documents';
 import channelRoutes from './routes/channels';
 import purchaseRoutes from './routes/purchases';
+import adminRoutes from './routes/admin';
 
 import { AgentOrchestrator } from './agents/orchestrator';
 import { initDatabase } from './db/init';
@@ -38,6 +39,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/channels', channelRoutes);
 app.use('/api/purchases', purchaseRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
