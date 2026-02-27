@@ -4,7 +4,6 @@ import {
   Brain,
   AlertTriangle,
   TrendingUp,
-  CheckCircle,
   Lightbulb,
   Download,
   RefreshCw,
