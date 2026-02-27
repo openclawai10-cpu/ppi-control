@@ -165,7 +165,7 @@ export default function Purchases() {
         ) : (
           purchases.map((purchase) => {
             const config = statusConfig[purchase.status] || statusConfig.pending_quotations;
-            const quotations = JSON.parse(purchase.quotations || '[]');
+            const quotations = parseQuotations(purchase.quotations);
             const Icon = config.icon;
 
             return (
