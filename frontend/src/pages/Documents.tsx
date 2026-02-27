@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Plus, Search, FileText, Trash2, Download, Upload, File, FileArchive, FileSpreadsheet, Image, X } from 'lucide-react';
+import { Search, Trash2, Download, Upload, File, FileArchive, FileSpreadsheet, FileText, Image, X } from 'lucide-react';
 
 interface Document {
   id: string;
