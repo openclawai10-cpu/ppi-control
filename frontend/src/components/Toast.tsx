@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, CheckCircle, AlertTriangle, Info, Bell } from 'lucide-react';
+import { X, CheckCircle, AlertTriangle, Info } from 'lucide-react';
 
 export interface Toast {
   id: string;
@@ -7,12 +7,6 @@ export interface Toast {
   title: string;
   message?: string;
   duration?: number;
-}
-
-interface ToastContextType {
-  toasts: Toast[];
-  addToast: (toast: Omit<Toast, 'id'>) => void;
-  removeToast: (id: string) => void;
 }
 
 let toastCallback: ((toast: Omit<Toast, 'id'>) => void) | null = null;

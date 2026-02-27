@@ -10,7 +10,8 @@ import {
   ShoppingCart,
   Menu,
   X,
-  HardHat
+  HardHat,
+  Brain
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -24,6 +25,7 @@ const navItems = [
   { path: '/projects', label: 'Projetos', icon: FolderOpen },
   { path: '/documents', label: 'Documentos', icon: FileBox },
   { path: '/purchases', label: 'Compras', icon: ShoppingCart },
+  { path: '/analysis', label: 'Análise IA', icon: Brain },
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
 ];
 

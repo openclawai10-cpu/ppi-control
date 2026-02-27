@@ -8,6 +8,7 @@ import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import Documents from './pages/Documents';
 import Purchases from './pages/Purchases';
+import Analysis from './pages/Analysis';
 
 function App() {
   return (
@@ -22,6 +23,7 @@ function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/purchases" element={<Purchases />} />
+          <Route path="/analysis" element={<Analysis />} />
         </Routes>
       </Layout>
       <ToastContainer />
