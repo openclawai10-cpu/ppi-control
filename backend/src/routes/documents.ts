@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { pool } from '../db/init';
 import { v4 as uuidv4 } from 'uuid';
-import * as multer from 'multer';
+import multer from 'multer';
 
 const router = Router();
 
