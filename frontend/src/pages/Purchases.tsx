@@ -111,7 +111,18 @@ export default function Purchases() {
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+  };
+
+  const parseQuotations = (quotations: string | any[]):    any[] => {
+    if (!quotations) return [];
+    if (Array.isArray(quotations)) return quotations;
+    try {
+      const parsed = JSON.parse(quotations);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
   };
 
   return (
@@ -294,7 +305,7 @@ export default function Purchases() {
 
             {showQuotationModal.status === 'ready_for_comparison' ? (
               <div className="space-y-2">
-                {JSON.parse(showQuotationModal.quotations || '[]').map((q: any, index: number) => (
+                {parseQuotations(showQuotationModal.quotations).map((q: any, index: number) => (
                   <button
                     key={index}
                     onClick={() => handleSelectQuotation(showQuotationModal.id, index)}

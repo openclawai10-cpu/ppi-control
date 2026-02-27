@@ -8,26 +8,31 @@ import {
   Activity
 } from 'lucide-react';
 
-interface DashboardStats {
-  tasks: {
-    byColumn: Record<string, number>;
-    byPriority: Record<string, number>;
-    total: number;
-  };
-  financial: {
-    total: { count: number; amount: number };
-    paid: { count: number; amount: number };
-    pending: { count: number; amount: number };
-  };
-  risks: {
-    bySeverity: Record<string, number>;
-    byStatus: Record<string, number>;
-    total: number;
-  };
+interface TaskStats {
+  new: number;
+  allocated: number;
+  in_progress: number;
+  completed: number;
+}
+
+interface PaymentStats {
+  total: number;
+  paid: number;
+  pending: number;
+}
+
+interface RiskStats {
+  active: number;
+  resolved: number;
+  high: number;
+  medium: number;
+  low: number;
 }
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [taskStats, setTaskStats] = useState<TaskStats | null>(null);
+  const [paymentStats, setPaymentStats] = useState<PaymentStats | null>(null);
+  const [riskStats, setRiskStats] = useState<RiskStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [projectId, setProjectId] = useState<string>('');
   const [projects, setProjects] = useState<{ id: string; name: string }[]>([]);
@@ -35,19 +40,25 @@ export default function Dashboard() {
   const fetchData = async () => {
     setLoading(true);
     try {
-  
-      const [tasksRes, financialRes, risksRes, projectsRes] = await Promise.all([
-        axios.get(`/api/agents/summary/action?action=summary:tasks&payload=${JSON.stringify({ projectId })}`),
-        axios.get(`/api/agents/summary/action?action=summary:financial&payload=${JSON.stringify({ projectId })}`),
-        axios.get(`/api/agents/summary/action?action=summary:risks&payload=${JSON.stringify({ projectId })}`),
+      const [tasksRes, paymentsRes, risksRes, projectsRes] = await Promise.all([
+        axios.get(`/api/tasks?projectId=${projectId}`),
+        axios.get(`/api/payments/stats?projectId=${projectId}`),
+        axios.get(`/api/risks/stats?projectId=${projectId}`),
         axios.get('/api/projects')
       ]);
 
-      setStats({
-        tasks: tasksRes.data.result || { byColumn: {}, byPriority: {}, total: 0 },
-        financial: financialRes.data.result || { total: { count: 0, amount: 0 }, paid: { count: 0, amount: 0 }, pending: { count: 0, amount: 0 } },
-        risks: risksRes.data.result || { bySeverity: {}, byStatus: {}, total: 0 }
-      });
+      // Calcular estatísticas de tarefas
+      const tasks = tasksRes.data || [];
+      const taskStats: TaskStats = {
+        new: tasks.filter((t: any) => t.kanban_column === 'new').length,
+        allocated: tasks.filter((t: any) => t.kanban_column === 'allocated').length,
+        in_progress: tasks.filter((t: any) => t.kanban_column === 'in_progress').length,
+        completed: tasks.filter((t: any) => t.kanban_column === 'completed').length
+      };
+      setTaskStats(taskStats);
+
+      setPaymentStats(paymentsRes.data || { total: 0, paid: 0, pending: 0 });
+      setRiskStats(risksRes.data || { active: 0, resolved: 0, high: 0, medium: 0, low: 0 });
       setProjects(projectsRes.data);
     } catch (error) {
       console.error('Failed to fetch dashboard:', error);
@@ -61,7 +72,7 @@ export default function Dashboard() {
   }, [projectId]);
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
   };
 
   if (loading) {
@@ -71,6 +82,9 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const totalTasks = taskStats ? taskStats.new + taskStats.allocated + taskStats.in_progress + taskStats.completed : 0;
+  const totalRisks = riskStats ? riskStats.high + riskStats.medium + riskStats.low : 0;
 
   return (
     <div className="space-y-6">
@@ -100,7 +114,7 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Total de Tarefas</p>
-              <p className="text-2xl font-bold">{stats?.tasks.total || 0}</p>
+              <p className="text-2xl font-bold">{totalTasks}</p>
             </div>
           </div>
         </div>
@@ -112,7 +126,7 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Pago</p>
-              <p className="text-2xl font-bold">{formatCurrency(stats?.financial.paid.amount || 0)}</p>
+              <p className="text-2xl font-bold">{formatCurrency(paymentStats?.paid || 0)}</p>
             </div>
           </div>
         </div>
@@ -124,7 +138,7 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Pendente</p>
-              <p className="text-2xl font-bold">{formatCurrency(stats?.financial.pending.amount || 0)}</p>
+              <p className="text-2xl font-bold">{formatCurrency(paymentStats?.pending || 0)}</p>
             </div>
           </div>
         </div>
@@ -136,7 +150,7 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-sm text-gray-500">Riscos Ativos</p>
-              <p className="text-2xl font-bold">{stats?.risks.byStatus.active || 0}</p>
+              <p className="text-2xl font-bold">{riskStats?.active || 0}</p>
             </div>
           </div>
         </div>
@@ -148,23 +162,37 @@ export default function Dashboard() {
         <div className="bg-white rounded-lg border p-4">
           <h3 className="font-bold mb-4 flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-primary-600" />
-            Tarefas por Coluna
+            Tarefas por Status
           </h3>
           <div className="space-y-3">
-            {Object.entries(stats?.tasks.byColumn || {}).map(([column, count]) => (
-              <div key={column} className="flex items-center justify-between">
-                <span className="capitalize">{column.replace('_', ' ')}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-32 bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-primary-600 h-2 rounded-full"
-                      style={{ width: `${(count / (stats?.tasks.total || 1)) * 100}%` }}
-                    />
+            {taskStats && Object.entries(taskStats).map(([column, count]) => {
+              const labels: Record<string, string> = {
+                new: 'Novos',
+                allocated: 'Alocados',
+                in_progress: 'Em Andamento',
+                completed: 'Concluídos'
+              };
+              const colors: Record<string, string> = {
+                new: 'bg-gray-400',
+                allocated: 'bg-blue-500',
+                in_progress: 'bg-yellow-500',
+                completed: 'bg-green-500'
+              };
+              return (
+                <div key={column} className="flex items-center justify-between">
+                  <span>{labels[column] || column}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-32 bg-gray-200 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${colors[column] || 'bg-gray-400'}`}
+                        style={{ width: `${totalTasks > 0 ? (count / totalTasks) * 100 : 0}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium w-8 text-right">{count}</span>
                   </div>
-                  <span className="text-sm font-medium w-8 text-right">{count}</span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -175,48 +203,37 @@ export default function Dashboard() {
             Riscos por Severidade
           </h3>
           <div className="space-y-3">
-            {Object.entries(stats?.risks.bySeverity || {}).map(([severity, count]) => (
-              <div key={severity} className="flex items-center justify-between">
-                <span className="capitalize">{severity}</span>
-                <div className="flex items-center gap-2">
-                  <div className="w-32 bg-gray-200 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full ${
-                        severity === 'high' ? 'bg-red-500' :
-                        severity === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                      }`}
-                      style={{ width: `${(count / (stats?.risks.total || 1)) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium w-8 text-right">{count}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Financial summary */}
-        <div className="bg-white rounded-lg border p-4 lg:col-span-2">
-          <h3 className="font-bold mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
-            Resumo Financeiro
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <p className="text-sm text-gray-500">Total</p>
-              <p className="text-xl font-bold">{formatCurrency(stats?.financial.total.amount || 0)}</p>
-              <p className="text-xs text-gray-400">{stats?.financial.total.count || 0} pagamentos</p>
-            </div>
-            <div className="p-4 bg-green-50 rounded-lg">
-              <p className="text-sm text-gray-500">Pago</p>
-              <p className="text-xl font-bold text-green-700">{formatCurrency(stats?.financial.paid.amount || 0)}</p>
-              <p className="text-xs text-gray-400">{stats?.financial.paid.count || 0} pagamentos</p>
-            </div>
-            <div className="p-4 bg-yellow-50 rounded-lg">
-              <p className="text-sm text-gray-500">Pendente</p>
-              <p className="text-xl font-bold text-yellow-700">{formatCurrency(stats?.financial.pending.amount || 0)}</p>
-              <p className="text-xs text-gray-400">{stats?.financial.pending.count || 0} pagamentos</p>
-            </div>
+            {riskStats && (
+              <>
+                {['high', 'medium', 'low'].map((severity) => {
+                  const count = riskStats[severity as keyof RiskStats] || 0;
+                  const labels: Record<string, string> = {
+                    high: 'Alta',
+                    medium: 'Média',
+                    low: 'Baixa'
+                  };
+                  const colors: Record<string, string> = {
+                    high: 'bg-red-500',
+                    medium: 'bg-yellow-500',
+                    low: 'bg-green-500'
+                  };
+                  return (
+                    <div key={severity} className="flex items-center justify-between">
+                      <span>{labels[severity]}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="w-32 bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full ${colors[severity]}`}
+                            style={{ width: `${totalRisks > 0 ? (count / totalRisks) * 100 : 0}%` }}
+                          />
+                        </div>
+                        <span className="text-sm font-medium w-8 text-right">{count}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            )}
           </div>
         </div>
       </div>
