@@ -7,6 +7,7 @@ RUN npm install
 
 COPY tsconfig.json ./
 COPY src ./src
+COPY seed.sql ./seed.sql
 
 RUN npm run build
 
